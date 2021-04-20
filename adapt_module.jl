@@ -38,22 +38,21 @@ using PyPlot
     Topt_pel = 25
     σ= 6
     T = 30
-    a_PC_litt = 2.0 
-    a_PC_pel = 1.0
+
     
 end
 
 
 function adapt_model!(du, u, p, t,)
-    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, Tmax_litt, Tmax_pel, Topt_litt, Topt_pel, σ, T , a_PC_pel, a_PC_litt= p
+    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, Tmax_litt, Tmax_pel, Topt_litt, Topt_pel, σ, T , a_PC_pel(T), a_PC_litt(T)= p
     
     R_litt, R_pel, C_litt, C_pel, P = u
 
-    du[1] = r_litt * R_litt * (1 - (α_pel * R_pel + R_litt)/k_litt) - (a_CR_litt * R_litt * C_litt)/( 1 + a_CR_litt * h_CR * R_litt) - (a_PR_litt * R_litt * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt * h_PC * C_litt + a_PC_pel * h_PC * C_pel)
-    du[2] = r_pel * R_pel * (1 - (α_litt * R_litt + R_pel)/k_pel) - (a_CR_pel * R_pel * C_pel)/(1 + a_CR_pel * h_CR * R_pel) - (a_CR_pel * R_pel * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt * h_PC * C_litt + a_PC_pel * h_PC * C_pel)
-    du[3] = (e_CR * a_CR_litt * R_litt * C_litt)/(1 + a_CR_litt * h_CR * R_litt) - (a_PC_litt * C_litt * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_litt + a_PC_litt * h_PC * C_litt + a_PC_pel * h_PC * C_pel) - m_C * C_litt
-    du[4] = (e_CR * a_CR_pel * R_pel * C_pel)/(1 + a_CR_pel * h_CR * R_pel) - (a_PC_pel * C_pel * P)/(1 + a_PC_litt * h_PR * R_litt + a_PC_pel * h_PR * R_pel + a_PC_litt * h_PC * C_litt + a_PC_pel * h_PC * C_pel) - m_C * C_pel 
-    du[5] = (e_PR * a_PR_litt * R_litt * P * e_PR * a_PR_pel * R_pel * P + e_PC * a_PC_litt * C_litt * P + e_PC * a_PC_pel * C_pel * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt * h_PC * C_litt + a_PC_pel * h_PC * C_pel) - m_P * P
+    du[1] = r_litt * R_litt * (1 - (α_pel * R_pel + R_litt)/k_litt) - (a_CR_litt * R_litt * C_litt)/( 1 + a_CR_litt * h_CR * R_litt) - (a_PR_litt * R_litt * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt(T) * h_PC * C_litt + a_PC_pel(T) * h_PC * C_pel)
+    du[2] = r_pel * R_pel * (1 - (α_litt * R_litt + R_pel)/k_pel) - (a_CR_pel * R_pel * C_pel)/(1 + a_CR_pel * h_CR * R_pel) - (a_CR_pel * R_pel * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt(T) * h_PC * C_litt + a_PC_pel(T) * h_PC * C_pel)
+    du[3] = (e_CR * a_CR_litt * R_litt * C_litt)/(1 + a_CR_litt * h_CR * R_litt) - (a_PC_litt(T) * C_litt * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_litt + a_PC_litt(T) * h_PC * C_litt + a_PC_pel(T) * h_PC * C_pel) - m_C * C_litt
+    du[4] = (e_CR * a_CR_pel * R_pel * C_pel)/(1 + a_CR_pel * h_CR * R_pel) - (a_PC_pel(T) * C_pel * P)/(1 + a_PC_litt(T) * h_PR * R_litt + a_PC_pel(T) * h_PR * R_pel + a_PC_litt(T) * h_PC * C_litt + a_PC_pel(T) * h_PC * C_pel) - m_C * C_pel 
+    du[5] = (e_PR * a_PR_litt * R_litt * P * e_PR * a_PR_pel * R_pel * P + e_PC * a_PC_litt(T) * C_litt * P + e_PC * a_PC_pel(T) * C_pel * P)/(1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + a_PC_litt(T) * h_PC * C_litt + a_PC_pel(T) * h_PC * C_pel) - m_P * P
 
     return du
 end
@@ -99,7 +98,7 @@ end
 let
     u0 = [0.5,0.5,0.5,0.5,0.5]
     t_span = (0.0, 100.0)
-    p = AdaptPar()
+    p = AdaptPar(T=30)
 
     prob = ODEProblem(adapt_model!, u0, t_span, p)
     sol = DifferentialEquations.solve(prob, reltol = 1e-8)
