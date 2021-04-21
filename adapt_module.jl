@@ -1,9 +1,10 @@
 using Parameters: @with_kw, @unpack
 using LinearAlgebra
 using ForwardDiff
-using Plots
-using DifferentialEquations
 using PyPlot
+using DifferentialEquations
+using Pkg
+using TimeSeries
 
 
 ## Here, we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
@@ -31,6 +32,7 @@ function a_PC_pel(u, p, t)
 end
 
 @with_kw mutable struct AdaptPar{F <: Function}
+    
     r_litt = 1.0
     k_litt = 1.0
     α_pel = 0.8      ##competitive influence of pelagic resource on littoral resource 
@@ -81,6 +83,12 @@ function adapt_model!(du, u, p, t)
     return du
 end
 
+p = AdaptPar
+u0 = [0.1, 0.8, 0.7, 0.5, 0.5]
+prob = ODEProblem(adapt_model!, u0, tspan, p)
+sol = solve(prob, KenCarp3(), abstol = 1e-8, reltol = 1e-8, callback = PositiveDomain(abstol = 1e-10), maxstep = 0.1)
+
+plot(sol.t, sol.u)
 
 
 
