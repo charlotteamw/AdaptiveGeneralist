@@ -40,31 +40,29 @@ using NLsolve
     Topt_litt = 32
     Tmax_pel = 32
     Topt_pel = 25
-    σ= 6
-    T=0
+    σ = 6
+    T = 0
     
 end
 
 
 ## Omnivory Module with Temp Dependent Attack Rates (alitt => aPC in littoral zone; apel => aPC in pelagic zone)
 
-function adapt_model!(du, u, p, t,)
-    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel,σ = p 
-   
-    alitt =  if T < Topt_litt
-        return aT_litt * exp(-((T - Topt_litt)/(2 \σ))^2)
-      else T >= Topt_litt
-          return aT_litt* (1 - ((T - (Topt_litt))/((Topt_litt) - Tmax_litt))^2)   
-      end 
-  
-    apel =  if T < Topt_pel
-        return aT_pel * exp(-((T - Topt_pel)/(2 \σ))^2)
-      else T >= Topt_pel
-          return aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2)   
-      end 
-
+function adapt_model!(du, u, p, t)
+    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
+    
+    alitt = ifelse(T < Topt_litt,  
+        aT_litt * exp(-((T - Topt_litt)/(2 \σ))^2), 
+        aT_litt * (1 - ((T - (Topt_litt))/((Topt_litt) - Tmax_litt))^2)
+        )
+        
+    apel = ifelse(T < Topt_pel, 
+        aT_pel * exp(-((T - Topt_pel)/(2 \σ))^2),
+        aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2) 
+    )
+    
     R_litt, R_pel, C_litt, C_pel, P = u
-
+    
     du[1] = r_litt * R_litt * (1 - (α_pel * R_pel + R_litt/ k_litt)) - (a_CR_litt * R_litt * C_litt / (1 + a_CR_litt * h_CR * R_litt)) - (a_PR_litt * R_litt * P/ (1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel) )
     du[2] = r_pel * R_pel * (1 - (α_litt * R_pel + R_litt/ k_pel)) - (a_CR_pel * R_pel * C_pel / (1 + a_CR_pel * h_CR * R_pel)) - (a_PR_pel * R_pel * P/ (1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel) )
     du[3] = ((e_CR * a_CR_litt * R_litt * C_litt) / (1 + a_CR_litt * R_litt * h_CR)) - (alitt * C_litt * P / ( 1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel)) - m_C * C_litt 
@@ -74,13 +72,9 @@ function adapt_model!(du, u, p, t,)
     return du
 end
 
-
-
 let
-    u0 = [0.5, 0.4, 0.6, 0.7, 0.1]
+    u0 = [0.2, 0.4, 0.6, 0.7, 0.1]
     t_span = (0.0, 500.0)
-
-    p = AdaptPar()
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
