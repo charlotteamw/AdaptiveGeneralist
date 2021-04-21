@@ -22,15 +22,15 @@ using NLsolve
     r_pel = 1.0
     α_litt = 0.8     ##competitive influence of littoral resource on pelagic resource 
     k_pel = 1.0
-    e_CR = 0.8
+    e_CR = 0.5
     h_CR = 0.5
     m_C = 0.2
     a_CR_litt = 1.0
     a_CR_pel = 1.0
     h_PC = 0.5
     h_PR = 0.5
-    e_PC = 0.8
-    e_PR = 0.8
+    e_PC = 0.5
+    e_PR = 0.5
     m_P = 0.3
     a_PR_litt = 0.2 
     a_PR_pel = 0.2 
@@ -41,7 +41,7 @@ using NLsolve
     Tmax_pel = 32
     Topt_pel = 25
     σ = 6
-    T = 0
+    T = 30
     
 end
 
@@ -67,14 +67,15 @@ function adapt_model!(du, u, p, t)
     du[2] = r_pel * R_pel * (1 - (α_litt * R_pel + R_litt/ k_pel)) - (a_CR_pel * R_pel * C_pel / (1 + a_CR_pel * h_CR * R_pel)) - (a_PR_pel * R_pel * P/ (1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel) )
     du[3] = ((e_CR * a_CR_litt * R_litt * C_litt) / (1 + a_CR_litt * R_litt * h_CR)) - (alitt * C_litt * P / ( 1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel)) - m_C * C_litt 
     du[4] = ((e_CR * a_CR_pel * R_pel * C_pel) / (1 + a_CR_pel * R_pel * h_CR)) - (apel* C_pel * P / ( 1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel)) - m_C * C_pel
-    du[5] = (e_PR * a_PR_litt * R_litt * P  + e_PR * a_PR_pel * R_litt * P + e_PC * alitt * C_litt * P + e_PC * apel * C_pel * P) / ( 1 + a_PR_litt * h_PR * R_litt + a_PR_pel * h_PR * R_pel + alitt * h_PC * C_litt + apel * h_PC * C_pel) - m_P * P  
+    du[5] = ((e_PR * a_PR_litt * R_litt * P ) + (e_PR * a_PR_pel * R_litt * P) + (e_PC * alitt * C_litt * P) + (e_PC * apel * C_pel * P)) / ( 1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR * R_pel) + (alitt * h_PC * C_litt) + (apel * h_PC * C_pel)) - m_P * P  
     
     return du
 end
 
 let
-    u0 = [0.2, 0.4, 0.6, 0.7, 0.1]
+    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     t_span = (0.0, 500.0)
+    p = AdaptPar(T=25)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
