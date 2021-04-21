@@ -67,8 +67,8 @@ end
 function adapt_model!(du, u, p, t)
     @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P = p 
     
-    alitt =  a_PC_litt (u, p, t)
-    apel = a_PC_pel (u, p, t)
+    alitt =  a_PC_litt(u, p, t)
+    apel = a_PC_pel(u, p, t)
 
     R_litt, R_pel, C_litt, C_pel, P = u
 
@@ -82,31 +82,9 @@ function adapt_model!(du, u, p, t)
 end
 
 
-# Function to calculate the jacobian at any point (with any model)
-function jac(u, adapt_model, p)
-    ForwardDiff.jacobian(u -> adapt_model(u, p, NaN), u)
-end
-
-# Function to calculate maximum eigenvalue (real part)
-λ_stability(M) = maximum(real.(eigvals(M)))
 
 
-## PLotting Time Series 
 
-let
-    u0 = [0.5,0.5,0.5,0.5,0.5]
-    t_span = (0.0, 100.0)
-    p = AdaptPar()
-
-    prob = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = DifferentialEquations.solve(prob, reltol = 1e-8)
-
-    adapt_model_ts = figure()
-    plot(sol.t, sol.u)
-    xlabel("time")
-    ylabel("Density")
-    return adapt_model
-end
 
 
 
