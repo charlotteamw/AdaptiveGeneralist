@@ -12,7 +12,7 @@ using NLsolve
 
 ## Parameters are categorized by macrohabitat -> parameters with "_litt" indicate littoral macrohabitat values and those with "_pel" indicate pelagic macrohabitat values  
 
-## Parameter alitt in model is the temperature dependent attack rate of P on C_litt and apel is the temperature dependent attack rate of P on C_Pel. All other attack rates are held constant (i.e. not temp dependent)
+## Parameter alitt in model is the temperature dependent attack rate of P on C_litt and apel is the temperature dependent attack rate of P on C_Pel. All other attack rates are not temp dependent
 
 
 @with_kw mutable struct AdaptPar
@@ -87,6 +87,8 @@ let
     return adapt_ts
 
 end
+
+
 
 
 
