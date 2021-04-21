@@ -73,11 +73,13 @@ function adapt_model!(du, u, p, t)
 end
 
 let
-    u0 = [0.2, 0.4, 0.6, 0.7, 0.1]
+    u0 = [0.5, 0.4, 0.6, 0.7, 0.1]
     t_span = (0.0, 500.0)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
+    
+    p = AdaptPar()
 
     adapt_ts = figure()
     plot(sol.t, sol.u)
