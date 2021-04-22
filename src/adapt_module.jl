@@ -16,11 +16,12 @@ using NLsolve
 
 
 @with_kw mutable struct AdaptPar
+    
     r_litt = 1.0
-    k_litt = 1.0
+    k_litt = 3.0
     α_pel = 0.8      ##competitive influence of pelagic resource on littoral resource 
     r_pel = 1.0
-    α_litt = 0.8     ##competitive influence of littoral resource on pelagic resource 
+    α_litt = 0.2    ##competitive influence of littoral resource on pelagic resource 
     k_pel = 1.0
     e_CR = 0.5
     h_CR = 0.5
@@ -59,7 +60,7 @@ function adapt_model!(du, u, p, t)
     apel = ifelse(T < Topt_pel, 
         aT_pel * exp(-((T - Topt_pel)/(2 \σ))^2),
         aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2) 
-    )
+        )
     
     R_litt, R_pel, C_litt, C_pel, P = u
     
@@ -72,13 +73,15 @@ function adapt_model!(du, u, p, t)
     return du
 end
 
+
+
 let
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     t_span = (0.0, 500.0)
-    p = AdaptPar(T=25)
+    p = AdaptPar(T=30)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
+    sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
 
     adapt_ts = figure()
     plot(sol.t, sol.u)
@@ -88,22 +91,23 @@ let
 
 end
 
+## Calculating Interior Eqs -- numerical solutions
 
+tspan = (0.0, 1000.0)
+u0 = [1.0, 3.0, 2.0, 2.0, 1.5]
 
+par = AdaptPar()
+prob = ODEProblem(adapt_model!, u0, tspan, par)
 
+sol = OrdinaryDiffEq.solve(prob)
 
+eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
+## numerical solutions to substitute into equations
 
-
-
-
-
-
-
-
-
-
-
-
-
+R_litt --> 4.600390005131048e-16
+R_pel --> 4.291494958507257
+C_litt --> 5.587310943655076e-15
+C_pel --> 0.35728737396415844
+P --> 0.28708667517189534
 
