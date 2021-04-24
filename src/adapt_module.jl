@@ -4,7 +4,9 @@ using ForwardDiff
 using PyPlot
 using DifferentialEquations
 using NLsolve
-
+using Statistics
+using RecursiveArrayTools
+using Noise
 
 ## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
 # 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
@@ -18,31 +20,32 @@ using NLsolve
 @with_kw mutable struct AdaptPar
     
     r_litt = 1.0
-    k_litt = 3.0
-    α_pel = 0.8      ##competitive influence of pelagic resource on littoral resource 
+    k_litt = 1.0
+    α_pel = 0.2      ##competitive influence of pelagic resource on littoral resource 
     r_pel = 1.0
     α_litt = 0.2    ##competitive influence of littoral resource on pelagic resource 
     k_pel = 1.0
-    e_CR = 0.5
+    e_CR = 0.4
     h_CR = 0.5
     m_C = 0.2
     a_CR_litt = 1.0
     a_CR_pel = 1.0
     h_PC = 0.5
     h_PR = 0.5
-    e_PC = 0.5
-    e_PR = 0.5
+    e_PC = 0.4
+    e_PR = 0.4
     m_P = 0.3
     a_PR_litt = 0.2 
     a_PR_pel = 0.2 
     aT_litt = 3.0
-    aT_pel = 7.0
+    aT_pel = 3.0
     Tmax_litt = 40
     Topt_litt = 32
     Tmax_pel = 32
     Topt_pel = 25
     σ = 6
     T = 30
+    noise = 0.001
     
 end
 
@@ -50,7 +53,7 @@ end
 ## Omnivory Module with Temp Dependent Attack Rates (alitt => aPC in littoral zone; apel => aPC in pelagic zone)
 
 function adapt_model!(du, u, p, t)
-    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
+    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ, noise = p 
     
     alitt = ifelse(T < Topt_litt,  
         aT_litt * exp(-((T - Topt_litt)/(2 \σ))^2), 
@@ -78,7 +81,7 @@ end
 let
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     t_span = (0.0, 500.0)
-    p = AdaptPar(T=30)
+    p = AdaptPar(T=25)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
@@ -106,9 +109,40 @@ eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
 ## numerical solutions to substitute into equations
 
-R_litt --> 4.600390005131048e-16
-R_pel --> 4.291494958507257
-C_litt --> 5.587310943655076e-15
-C_pel --> 0.35728737396415844
-P --> 0.28708667517189534
+## R_litt --> 4.600390005131048e-16
+## R_pel --> 4.291494958507257
+## C_litt --> 5.587310943655076e-15
+## C_pel --> 0.35728737396415844
+## P --> 0.28708667517189534
 
+## Adding stochasticity to model using gaussian white noise (SDEproblem)
+
+function stoch_adapt!(du, u, p2, t)
+    @unpack  noise = p2
+
+    du[1] = noise * u[1]
+    du[2] = noise * u[2]
+    du[3] = noise * u[3]
+    du[4] = noise * u[4]
+    du[5] = noise * u[5]
+    return du 
+end
+
+
+## Plotting time series with noise 
+
+let
+    param = AdaptPar(T=25, noise = 0.01)
+    u0 = fill(0.1, 9)
+    tspan = (0.0, 10000.0)
+
+    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, param)
+    sol_stoch = solve(prob_stoch, SKenCarp(), reltol = 1e-15, callback = PositiveDomain())
+
+    stoch_ts = figure()
+    plot(sol_stoch.t, sol_stoch.u)
+    xlabel("time")
+    ylabel("Density")
+    return stoch_ts
+
+end
