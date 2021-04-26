@@ -20,21 +20,21 @@ using Noise
 @with_kw mutable struct AdaptPar
     
     r_litt = 1.0
-    k_litt = 1.2
-    α_pel = 0.2      ##competitive influence of pelagic resource on littoral resource 
+    k_litt = 1.0
+    α_pel = 0.8      ##competitive influence of pelagic resource on littoral resource 
     r_pel = 1.0
-    α_litt = 0.1  ##competitive influence of littoral resource on pelagic resource 
-    k_pel = 0.4
-    e_CR = 0.4
+    α_litt = 0.8  ##competitive influence of littoral resource on pelagic resource 
+    k_pel = 1.0
+    e_CR = 0.8
     h_CR = 0.5
-    m_C = 0.3
-    a_CR_litt = 2.0
-    a_CR_pel = 0.5
+    m_C = 0.2
+    a_CR_litt = 1.0
+    a_CR_pel = 1.0
     h_PC = 0.5
     h_PR = 0.5
-    e_PC = 0.4
-    e_PR = 0.4
-    m_P = 0.4
+    e_PC = 0.8
+    e_PR = 0.8
+    m_P = 0.3
     a_PR_litt = 0.2 
     a_PR_pel = 0.2 
     aT_litt = 1.0
@@ -81,7 +81,7 @@ end
 let
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     t_span = (0.0, 500.0)
-    p = AdaptPar(T=15)
+    p = AdaptPar(T=26)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
@@ -133,7 +133,7 @@ end
 ## Plotting time series with noise 
 
 let
-    param = AdaptPar(T=22, noise = 0.01)
+    param = AdaptPar(T=26, noise = 0.01)
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     tspan = (0.0, 1000.0)
 
@@ -148,5 +148,3 @@ let
     return stoch_ts
 
 end
-
-
