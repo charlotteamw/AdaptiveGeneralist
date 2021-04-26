@@ -20,25 +20,25 @@ using Noise
 @with_kw mutable struct AdaptPar
     
     r_litt = 1.0
-    k_litt = 1.0
+    k_litt = 1.2
     α_pel = 0.2      ##competitive influence of pelagic resource on littoral resource 
     r_pel = 1.0
-    α_litt = 0.2    ##competitive influence of littoral resource on pelagic resource 
-    k_pel = 1.0
+    α_litt = 0.1  ##competitive influence of littoral resource on pelagic resource 
+    k_pel = 0.4
     e_CR = 0.4
     h_CR = 0.5
-    m_C = 0.2
-    a_CR_litt = 1.0
-    a_CR_pel = 1.0
+    m_C = 0.3
+    a_CR_litt = 2.0
+    a_CR_pel = 0.5
     h_PC = 0.5
     h_PR = 0.5
     e_PC = 0.4
     e_PR = 0.4
-    m_P = 0.3
+    m_P = 0.4
     a_PR_litt = 0.2 
     a_PR_pel = 0.2 
-    aT_litt = 3.0
-    aT_pel = 3.0
+    aT_litt = 1.0
+    aT_pel = 1.0
     Tmax_litt = 40
     Topt_litt = 32
     Tmax_pel = 32
@@ -81,7 +81,7 @@ end
 let
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     t_span = (0.0, 500.0)
-    p = AdaptPar(T=25)
+    p = AdaptPar(T=15)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
@@ -90,6 +90,7 @@ let
     plot(sol.t, sol.u)
     xlabel("time")
     ylabel("Density")
+    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
     return adapt_ts
 
 end
@@ -132,17 +133,20 @@ end
 ## Plotting time series with noise 
 
 let
-    param = AdaptPar(T=25, noise = 0.01)
-    u0 = fill(0.1, 9)
-    tspan = (0.0, 10000.0)
+    param = AdaptPar(T=22, noise = 0.01)
+    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
+    tspan = (0.0, 1000.0)
 
     prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, param)
-    sol_stoch = solve(prob_stoch, SKenCarp(), reltol = 1e-15, callback = PositiveDomain())
+    sol_stoch = solve(prob_stoch, reltol = 1e-15, callback = PositiveDomain())
 
     stoch_ts = figure()
     plot(sol_stoch.t, sol_stoch.u)
     xlabel("time")
     ylabel("Density")
+    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
     return stoch_ts
 
 end
+
+
