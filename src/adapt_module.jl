@@ -20,8 +20,8 @@ using Noise
     
     r_litt = 1.0
     r_pel = 1.0
-    α_pel = 0.8    ##competitive influence of pelagic resource on littoral resource 
-    α_litt = 0.8   ## competitve influence of littoral resource on pelagic resource
+    α_pel = 0.6    ##competitive influence of pelagic resource on littoral resource 
+    α_litt = 0.6   ## competitve influence of littoral resource on pelagic resource
     k_litt = 1.0 
     k_pel = 1.0
     h_CR = 0.5
@@ -52,7 +52,7 @@ end
 ## Omnivory Module with Temp Dependent Attack Rates (alitt => aPC in littoral zone; apel => aPC in pelagic zone)
 
 function adapt_model!(du, u, p, t)
-    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ, noise = p 
+    @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
     
     a_PC_litt = ifelse(T < Topt_litt,  
     aT_litt * exp(-((T - Topt_litt)/(2*σ))^2), 
@@ -77,9 +77,13 @@ end
 
 
 let
-    u0 = [0.5, 0.3, 0.5, 0.3, 0.3]
+    u0 = [ 0.6319695090,
+    0.549944401,
+    0.21748785,
+    0.2053858,
+    0.1619494]
     t_span = (0.0, 1000.0)
-    p = AdaptPar(T=23)
+    p = AdaptPar(T=29)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt)
@@ -95,10 +99,10 @@ end
 
 ## Calculating Interior Eqs -- numerical solutions
 
-tspan = (0.0, 500.0)
-u0 = [0.5, 0.3, 0.5, 0.3, 0.3]
+tspan = (0.0, 1000.0)
+u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
 
-par = AdaptPar(T=25)
+par = AdaptPar(T=29)
 
 prob = ODEProblem(adapt_model!, u0, tspan, par)
 
