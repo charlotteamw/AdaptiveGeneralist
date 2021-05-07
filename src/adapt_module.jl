@@ -7,7 +7,7 @@ using NLsolve
 using Statistics
 using RecursiveArrayTools
 using Noise
-using SymPy
+using Distributed
 
 ## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
 # 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
@@ -130,7 +130,6 @@ find_eq(u, AdaptPar) = nlsolve((du, u) -> adapt_model!(du, u, AdaptPar, zero(u))
 
 cmat(u, AdaptPar) = ForwardDiff.jacobian(x -> rhs(x, AdaptPar), u)
 
-
 λ1_stability(M) = maximum(real.(eigvals(M)))
 
 
@@ -143,10 +142,61 @@ eq_adapt = find_eq(sol[end], par)
 adapt_λ1 = λ1_stability(cmat(eq_adapt, par))
 
 
-@everywhere function calc_stab(rval, tend)
+# Check mark diagram
+function temp_maxeigen_data()
+    Tvals = 0.4:0.0001:0.9
+    max_eig = zeros(length(Tvals))
+
+    for (ei, Tval) in enumerate(Tvals)
+        p = AdaptPar(T = Tval)
+        tspan = (0.0, 1000.0)
+        u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
+        prob = ODEProblem(adapt_model!, u0, tspan, p)
+        sol = OrdinaryDiffEq.solve(prob)
+        eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
+        max_eig[ei] = λ_stability(jac(eq, adapt_model!, p))
+    end
+    return hcat(collect(Tvals), max_eig)
+end
+
+let
+    data = temp_maxeigen_data()
+    maxeigen_plot = figure()
+    plot(data[:,1], data[:,2], color = "black")
+    ylabel("Re(λₘₐₓ)", fontsize = 15)
+    xlim(15, 45)
+    ylim(-1.0, 1.0)
+    xlabel("Temperature (C)", fontsize = 15)
+    hlines(0.0, linestyles = "dashed", linewidth = 0.5)
+    vlines([0.441, 0.710], ymin = -1.0, ymax = 1.0, linestyles = "dashed")
+    return maxeigen_plot
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Bifurcation Analysis 
+# parallel set up
+addprocs(length(Sys.cpu_info())-1)
+
+@everywhere function calc_minmax(rval, tend)
     u0 = [0.5, 0.5,0.5,0.5,0.1]
-    t_span = (0.0, 1000)
-    remove_transient = 300.0:1.0:1000
+    t_span = (0.0, tend)
+    remove_transient = 300.0:1.0:tend
     p = AdaptPar(r_litt = rval)
     prob = ODEProblem(adapt_model!, u0, t_span, p)
     sol = DifferentialEquations.solve(prob, reltol = 1e-8)
@@ -158,14 +208,14 @@ adapt_λ1 = λ1_stability(cmat(eq_adapt, par))
 end
 
 function parallel_minmax(tend)
-    effrange = 0.43:0.01:0.9
-    data = pmap(eval -> calc_minmax(eval, tend), effrange)
-    minmaxC = zeros(length(effrange),2)
-    for i in 1:length(effrange)
-        minmaxC[i,1] = data[i][1]
-        minmaxC[i,2] = data[i][2]
+    rrange = 0.43:0.01:0.9
+    data = pmap(rval -> calc_minmax(rval, tend), rrange)
+    minmaxP = zeros(length(rrange),5)
+    for i in 1:length(rrange)
+        minmaxP[i,1] = data[i][1]
+        minmaxP[i,2] = data[i][2]
     end
-    return hcat(collect(effrange), minmaxC)
+    return hcat(collect(rrange), minmaxP)
 end
 
 let
@@ -173,8 +223,8 @@ let
     minmaxplot = figure()
     plot(data[:,1], data[:,2])
     plot(data[:,1], data[:,3])
-    xlabel("Efficiency")
-    ylabel("Consumer Max/Min")
+    xlabel("Littoral Resource Growth Rate (r_litt)")
+    ylabel("Predator Max/Min")
     return minmaxplot
 end
 
