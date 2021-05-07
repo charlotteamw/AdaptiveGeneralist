@@ -144,17 +144,21 @@ adapt_λ1 = λ1_stability(cmat(eq_adapt, par))
 
 # Check mark diagram
 function temp_maxeigen_data()
-    Tvals = 0.4:0.0001:0.9
+    tspan = (0.0, 1000.0)
+    u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
+    p = AdaptPar()
+    prob = ODEProblem(adapt_model!, u0, tspan, p)
+    sol = OrdinaryDiffEq.solve(prob)
+    Tvals = 15:0.0001:45
     max_eig = zeros(length(Tvals))
+    find_eq(u, p) = nlsolve((du, u) -> adapt_model!(du, u, p, zero(u)), u).zero
+    cmat(u, p) = ForwardDiff.jacobian(x -> rhs(x, p), u)
+    λ1_stability(M) = maximum(real.(eigvals(M)))
 
     for (ei, Tval) in enumerate(Tvals)
+        eq_adapt = find_eq(sol[end], p)
         p = AdaptPar(T = Tval)
-        tspan = (0.0, 1000.0)
-        u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
-        prob = ODEProblem(adapt_model!, u0, tspan, p)
-        sol = OrdinaryDiffEq.solve(prob)
-        eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-        max_eig[ei] = λ_stability(jac(eq, adapt_model!, p))
+        max_eig[ei] = λ1_stability(cmat(eq_adapt, p))
     end
     return hcat(collect(Tvals), max_eig)
 end
