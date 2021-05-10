@@ -135,11 +135,11 @@ cmat(u, AdaptPar) = ForwardDiff.jacobian(x -> rhs(x, AdaptPar), u)
 
 # Eigenvalue analysis
 
-par = AdaptPar(T=50)
+p = AdaptPar()
 
-eq_adapt = find_eq(sol[end], par)
+eq_adapt = find_eq(sol[end], p)
 
-adapt_λ1 = λ1_stability(cmat(eq_adapt, par))
+adapt_λ1 = λ1_stability(cmat(eq_adapt, p))
 
 
 # Check mark diagram
@@ -149,7 +149,7 @@ function temp_maxeigen_data()
     p = AdaptPar()
     prob = ODEProblem(adapt_model!, u0, tspan, p)
     sol = OrdinaryDiffEq.solve(prob)
-    Tvals = 15:0.0001:45
+    Tvals = 27:0.0001:30
     max_eig = zeros(length(Tvals))
     find_eq(u, p) = nlsolve((du, u) -> adapt_model!(du, u, p, zero(u)), u).zero
     cmat(u, p) = ForwardDiff.jacobian(x -> rhs(x, p), u)
@@ -168,11 +168,9 @@ let
     maxeigen_plot = figure()
     plot(data[:,1], data[:,2], color = "black")
     ylabel("Re(λₘₐₓ)", fontsize = 15)
-    xlim(15, 45)
+    xlim(27, 30)
     ylim(-1.0, 1.0)
     xlabel("Temperature (C)", fontsize = 15)
-    hlines(0.0, linestyles = "dashed", linewidth = 0.5)
-    vlines([0.441, 0.710], ymin = -1.0, ymax = 1.0, linestyles = "dashed")
     return maxeigen_plot
 end
 
