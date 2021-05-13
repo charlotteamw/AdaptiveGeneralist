@@ -17,7 +17,7 @@ using Distributed
 
 
 
-@with_kw mutable struct AdaptPar
+@with_kw mutable struct AdaptPar 
     
     r_litt = 1.0
     r_pel = 1.0
@@ -44,8 +44,8 @@ using Distributed
     Tmax_pel = 30
     Topt_pel = 24
     σ = 6
-    T = 34
-    noise = 0
+    T = 29
+    noise = 0.1
 
     
 end
@@ -67,13 +67,18 @@ function adapt_model!(du, u, p, t)
     aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2) 
     )
     
-    R_litt, R_pel, C_litt, C_pel, P = u
+    R_l, R_p, C_l, C_p, P = u
     
-    du[1] = r_litt * R_litt * (1 - ((α_pel * R_litt + R_pel)/k_litt)) - ((a_CR_litt * R_litt * C_litt)/ (1+ a_CR_litt + h_CR + R_litt )) - ((a_PR_litt * R_litt * P)/ (1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR  * R_pel) + (a_PC_litt * h_PC * C_litt) + (a_PC_pel * h_PC * C_pel))) 
-    du[2] = r_pel * R_pel * (1 - ((α_litt * R_litt + R_pel)/k_pel)) - ((a_CR_pel * R_pel * C_pel)/ (1+ a_CR_pel + h_CR + R_pel )) - ((a_PR_pel * R_pel * P)/ (1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR  * R_pel) + (a_PC_litt * h_PC * C_litt) + (a_PC_pel * h_PC * C_pel))) 
-    du[3] = (e_CR * a_CR_litt * R_litt *C_litt)/ (1 + a_CR_litt * h_CR * R_litt) - ((a_PC_litt * C_litt * P)/ (1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR  * R_pel) + (a_PC_litt * h_PC * C_litt) + (a_PC_pel * h_PC * C_pel))) - (m_C * C_litt)
-    du[4] = (e_CR * a_CR_pel * R_pel *C_pel)/ (1 + a_CR_pel * h_CR * R_pel) - ((a_PC_pel * C_pel * P)/ (1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR  * R_pel) + (a_PC_litt * h_PC * C_litt) + (a_PC_pel * h_PC * C_pel))) -  (m_C * C_pel)
-    du[5] =((e_PR * a_PR_litt * R_litt * P) + (e_PR * a_PR_pel * R_pel * P) + (e_PC * a_PC_litt * C_litt * P) + (e_PC * a_PC_pel * C_pel * P)) / (1 + (a_PR_litt * h_PR * R_litt) + (a_PR_pel * h_PR  * R_pel) + (a_PC_litt * h_PC * C_litt) + (a_PC_pel * h_PC * C_pel)) - (m_P * P)
+    du[1]= r_litt * R_l * (1 - (α_pel * R_p + R_l)/k_litt) - (a_CR_litt * R_l * C_l)/(1 + a_CR_litt * h_CR * R_l) - (a_PR_litt * R_l * P)/(1 + a_PR_litt * h_PR * R_l + a_PR_pel * h_PR * R_p + a_PC_litt * h_PC * C_l + a_PC_pel * h_PC * C_p)
+    
+    du[2] = r_pel * R_p * (1 - (α_litt * R_l + R_p)/k_pel) - (a_CR_pel * R_p * C_p)/(1 + a_CR_pel * h_CR * R_p) - (a_PR_pel * R_p * P)/(1 + a_PR_litt * h_PR * R_l + a_PR_pel * h_PR * R_p + a_PC_litt * h_PC * C_l + a_PC_pel * h_PC * C_p)
+
+    du[3] = (e_CR * a_CR_litt * R_l * C_l)/(1 + a_CR_litt * h_CR * R_l) - (a_PC_litt * C_l * P)/(1 + a_PR_litt * h_PR * R_l + a_PR_pel * h_PR * R_p + a_PC_litt * h_PC * C_l + a_PC_pel * h_PC * C_p) - m_C * C_l
+    
+    du[4] = (e_CR * a_CR_pel * R_p * C_p)/(1 + a_PC_pel * h_PC * R_p) - (a_PC_pel * C_p * P)/(1 + a_PR_litt * h_PR * R_l + a_PR_pel * h_PR * R_p + a_PC_litt * h_PC * C_l + a_PC_pel * h_PC * C_p) - m_C * C_p
+    
+    du[5] = (e_PR * a_PR_litt * R_l * P + e_PR * a_PR_pel * R_p * P + e_PC * a_PC_litt * C_l * P + e_PC * a_PC_pel * C_p * P)/(1 + a_PR_litt * h_PR * R_l + a_PR_pel * h_PR * R_p + a_PC_litt * h_PC * C_l + a_PC_pel * h_PC * C_p) - m_P * P
+
     return 
 end
 
@@ -85,7 +90,11 @@ function adapt_model(u, AdaptPar, t)
 end
 
 let
-    u0 = [ 0.5, 0.5, 0.3, 0.3, 0.1]
+    u0 = [0.6802990085400237,
+    0.5275129023434301,
+    0.08959168230963603,
+    0.23365213014702507,
+    0.06954368400104854]
     t_span = (0.0, 1000.0)
     p = AdaptPar()
 
@@ -105,9 +114,9 @@ end
 
 tspan = (0.0, 1000.0)
 
-u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
+u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
 
-par = AdaptPar(T=32)
+par = AdaptPar(T=29)
 
 prob = ODEProblem(adapt_model!, u0, tspan, par)
 
@@ -118,6 +127,8 @@ eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 ## output is numerical solutions to substitute into equations
 
 
+
+## Stability Analysis
 
 # Utilities for doing eigenvalue analysis using autodiff
 function rhs(u, AdaptPar)
@@ -133,27 +144,16 @@ cmat(u, AdaptPar) = ForwardDiff.jacobian(x -> rhs(x, AdaptPar), u)
 λ1_stability(M) = maximum(real.(eigvals(M)))
 
 
-# Eigenvalue analysis
-
-p = AdaptPar()
-
-eq_adapt = find_eq(sol[end], p)
-
-adapt_λ1 = λ1_stability(cmat(eq_adapt, p))
-
 
 # Check mark diagram
 function temp_maxeigen_data()
     tspan = (0.0, 1000.0)
-    u0 = [1.0, 1.0, 0.5, 0.5, 0.4]
-    p = AdaptPar()
+    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    p = AdaptPar(T=29)
     prob = ODEProblem(adapt_model!, u0, tspan, p)
     sol = OrdinaryDiffEq.solve(prob)
-    Tvals = 27:0.0001:30
+    Tvals = 20:0.0001:30
     max_eig = zeros(length(Tvals))
-    find_eq(u, p) = nlsolve((du, u) -> adapt_model!(du, u, p, zero(u)), u).zero
-    cmat(u, p) = ForwardDiff.jacobian(x -> rhs(x, p), u)
-    λ1_stability(M) = maximum(real.(eigvals(M)))
 
     for (ei, Tval) in enumerate(Tvals)
         eq_adapt = find_eq(sol[end], p)
@@ -168,76 +168,11 @@ let
     maxeigen_plot = figure()
     plot(data[:,1], data[:,2], color = "black")
     ylabel("Re(λₘₐₓ)", fontsize = 15)
-    xlim(27, 30)
+    xlim(20, 30)
     ylim(-1.0, 1.0)
     xlabel("Temperature (C)", fontsize = 15)
     return maxeigen_plot
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Bifurcation Analysis 
-# parallel set up
-addprocs(length(Sys.cpu_info())-1)
-
-@everywhere function calc_minmax(rval, tend)
-    u0 = [0.5, 0.5,0.5,0.5,0.1]
-    t_span = (0.0, tend)
-    remove_transient = 300.0:1.0:tend
-    p = AdaptPar(r_litt = rval)
-    prob = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = DifferentialEquations.solve(prob, reltol = 1e-8)
-    solend = sol(remove_transient)
-    minC = minimum(solend[2, 1:end])
-    maxC = maximum(solend[2, 1:end])
-
-    return [minC, maxC]
-end
-
-function parallel_minmax(tend)
-    rrange = 0.43:0.01:0.9
-    data = pmap(rval -> calc_minmax(rval, tend), rrange)
-    minmaxP = zeros(length(rrange),5)
-    for i in 1:length(rrange)
-        minmaxP[i,1] = data[i][1]
-        minmaxP[i,2] = data[i][2]
-    end
-    return hcat(collect(rrange), minmaxP)
-end
-
-let
-    data = parallel_minmax(400.0)
-    minmaxplot = figure()
-    plot(data[:,1], data[:,2])
-    plot(data[:,1], data[:,3])
-    xlabel("Littoral Resource Growth Rate (r_litt)")
-    ylabel("Predator Max/Min")
-    return minmaxplot
-end
-
-
-
-
-
-
-
-
-
 
 
 
@@ -258,7 +193,7 @@ end
 ## Plotting time series with noise 
 
 let
-    param = AdaptPar(T=26, noise = 0.01)
+    param = AdaptPar(T=29, noise = 0.01)
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
     tspan = (0.0, 1000.0)
 
