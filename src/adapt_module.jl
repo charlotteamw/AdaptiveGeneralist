@@ -51,7 +51,7 @@ using Distributed
 end
 
 
-## Omnivory Module with Temp Dependent Attack Rates (alitt => aPC in littoral zone; apel => aPC in pelagic zone)
+## Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
 
 function adapt_model!(du, u, p, t)
     @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
@@ -152,7 +152,7 @@ function temp_maxeigen_data()
     p = AdaptPar(T=29)
     prob = ODEProblem(adapt_model!, u0, tspan, p)
     sol = OrdinaryDiffEq.solve(prob)
-    Tvals = 20:0.0001:30
+    Tvals = 25:0.0001:35
     max_eig = zeros(length(Tvals))
 
     for (ei, Tval) in enumerate(Tvals)
@@ -168,7 +168,7 @@ let
     maxeigen_plot = figure()
     plot(data[:,1], data[:,2], color = "black")
     ylabel("Re(λₘₐₓ)", fontsize = 15)
-    xlim(20, 30)
+    xlim(25, 35)
     ylim(-1.0, 1.0)
     xlabel("Temperature (C)", fontsize = 15)
     return maxeigen_plot
