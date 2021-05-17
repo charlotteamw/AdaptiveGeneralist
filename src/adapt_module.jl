@@ -16,7 +16,6 @@ using Distributed
 ## Parameters are categorized by macrohabitat -> parameters with "_litt" indicate littoral macrohabitat values and those with "_pel" indicate pelagic macrohabitat values  
 
 
-
 @with_kw mutable struct AdaptPar 
     
     r_litt = 1.0
@@ -152,7 +151,7 @@ function temp_maxeigen_data()
     p = AdaptPar(T=29)
     prob = ODEProblem(adapt_model!, u0, tspan, p)
     sol = OrdinaryDiffEq.solve(prob)
-    Tvals = 25:0.0001:35
+    Tvals = 25:0.01:35
     max_eig = zeros(length(Tvals))
 
     for (ei, Tval) in enumerate(Tvals)
