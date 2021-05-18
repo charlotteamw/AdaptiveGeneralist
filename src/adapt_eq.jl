@@ -71,6 +71,9 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
+
+## Calculating eqs for AdaptPar 
+
 tspan = (0.0, 1000.0)
 
 u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
@@ -81,28 +84,28 @@ prob = ODEProblem(adapt_model!, u0, tspan, par)
 
 sol = OrdinaryDiffEq.solve(prob)
 
-equil= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
+eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
 
-function equ_plot(temp), rescon, cvboth)
+## For loop function to calculate eqs
+
+function equil_func(tpvals)
     par = AdaptPar()
-    par.T = temp
-    u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
-    eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-    tpvals = 20:0.1:30
-    u0 = randeq.(eq)
+    u0 = [0.5, 0.5, 0.5, 0.5, 0.3]
     tspan = (0.0, 100000.0)
     tstart = 90000
     tend = 100000
     tstep = 0.1
     tvals = tstart:tstep:tend
-    temp_eq = zeros(0.0, length(tpvals))
+    temp_func = zeros(length(tpvals))
     for (tpi, tpval) in enumerate(tpvals)
-        par.ε = epval
         prob = ODEProblem(adapt_model!, u0, tspan, par)
-        sol = OrdinaryDiffEq.solve(prob)
-        asol = sol(tvals)
+        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
+        eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
     end
-
+    
 end
 
+tpvals = 20:1:30
+
+print(equil_func(20:1:30))
