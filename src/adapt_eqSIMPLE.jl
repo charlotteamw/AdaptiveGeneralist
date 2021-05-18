@@ -75,36 +75,32 @@ end
 ## Calculating eqs for AdaptPar 
 
 tspan = (0.0, 1000.0)
-
 u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
 
 par = AdaptPar(T=30)
 
-prob = ODEProblem(adapt_model!, u0, tspan, par)
+# this the ode version solving in time, not running it now for speed
+ prob = ODEProblem(adapt_model!, u0, tspan, par)
+ sol = OrdinaryDiffEq.solve(prob)
 
-sol = OrdinaryDiffEq.solve(prob)
-
+# this is just solving algebraically where the odes =0 --> looks just for equilibrium
 eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
-
+# Now just going to calculate equilibrium from nonlinear solver
 ## For loop function to calculate eqs
 
-function equil_func(tempvals)
-    par = AdaptPar()
+
+# for now lets just speak in the most basic julia tongue so we now wtf we are doing
+# loop over i from 20 to 30 stepsize 5
+# call equilibrium solver
+
+for Ti=20.:1.0:30
+    par = AdaptPar(T=Ti)
     u0 = [0.5, 0.5, 0.5, 0.5, 0.3]
-    tspan = (0.0, 100000.0)
-    tstart = 90000
-    tend = 100000
-    tstep = 0.1
-    tvals = tstart:tstep:tend
-    for (tempval) in enumerate(tempvals)
-        prob = ODEProblem(adapt_model!, u0, tspan, par)
-        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
-        eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-    end
-    
+    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
+    print(Ti,eq)
 end
 
-tempvals = 20:1:30
 
-print(equil_func(tempvals))
+  
+
