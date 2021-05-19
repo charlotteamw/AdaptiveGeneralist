@@ -5,7 +5,9 @@ using PyPlot
 using DifferentialEquations
 using NLsolve
 
+pygui(true)
 
+# parameters declare them so they can be passed, mutable means you can change one or more
 @with_kw mutable struct AdaptPar 
     
     r_litt = 1.0
@@ -40,7 +42,8 @@ using NLsolve
 end
 
 
-## Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
+## Generalist Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
+# unpack is the passing of the mutable parameters
 
 function adapt_model!(du, u, p, t)
     @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
@@ -72,39 +75,55 @@ function adapt_model!(du, u, p, t)
 end
 
 
-## Calculating eqs for AdaptPar 
+## time span for ode solver when we use it
+# u0 is initial value of the initial value problem 
 
 tspan = (0.0, 1000.0)
-
 u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
 
 par = AdaptPar(T=30)
 
-prob = ODEProblem(adapt_model!, u0, tspan, par)
-
-sol = OrdinaryDiffEq.solve(prob)
-
-eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
+# this the ode version solving in time, not running it now for speed
+# prob = ODEProblem(adapt_model!, u0, tspan, par)
+# sol = OrdinaryDiffEq.solve(prob)
 
 
-## For loop function to calculate eqs
+# this is just solving algebraically where the odes =0 --> looks just for equilibrium
+# u0 is this initial valu you use to seed the nlsolve, if you use sol you use the last
+# solution out of the ode solver, lets not do that now
+eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
 
-function equil_func(tempvals)
-    par = AdaptPar()
-    u0 = [0.5, 0.5, 0.5, 0.5, 0.3]
-    tspan = (0.0, 100000.0)
-    tstart = 90000
-    tend = 100000
-    tstep = 0.1
-    tvals = tstart:tstep:tend
-    for (tempval) in enumerate(tempvals)
-        prob = ODEProblem(adapt_model!, u0, tspan, par)
-        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
-        eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-    end
-    
+# for now lets just speak in the most basic julia tongue so we now wtf we are doing
+# loop over i from 20 to 30 stepsize 5
+# call equilibrium solver
+# adatpar are the parameters and are mutbale remember
+# println separates lines of print so they are not mashed together
+
+# set actiual loop of parameter Tis -- temperature
+# figure out how many steps it will take and we wil luse this in the loop
+Tis = 20.0:0.01:30.0
+eqhold = fill(0.0,length(Tis),6)
+
+# loop over i but really subbing in Tis
+for i=1:length(Tis)
+    par = AdaptPar(T=Tis[i])
+   if i==1
+     u0 = [0.5,0.5,0.5,0.5, 0.3]
+   else 
+     u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
+   end 
+    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
+# ... filling appropriate eqhold cells, first with Tis (temp), and cells 2-6 second with equilibrium
+    eqhold[i,1] = Tis[i]
+    eqhold[i,2:end] = eq
+    println(eqhold[i,:])
 end
 
-tempvals = 20:1:30
+##3 shows 25th step of Tis and first state variable of model
+    @show eqhold[25,1]
 
-print(equil_func(tempvals))
+    plot(eqhold[:,1],eqhold[:,6])   
+    
+
+# now, for kicks, lets plot temperature versus Equilibrium, say P* first
+# 
