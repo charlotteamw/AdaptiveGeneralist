@@ -4,18 +4,10 @@ using ForwardDiff
 using PyPlot
 using DifferentialEquations
 using NLsolve
-using Statistics
-using RecursiveArrayTools
-using Noise
-using Distributed
 
-## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
-# 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
+pygui(true)
 
-
-## Parameters are categorized by macrohabitat -> parameters with "_litt" indicate littoral macrohabitat values and those with "_pel" indicate pelagic macrohabitat values  
-
-
+# parameters declare them so they can be passed, mutable means you can change one or more
 @with_kw mutable struct AdaptPar 
     
     r_litt = 1.0
@@ -34,10 +26,10 @@ using Distributed
     m_P = 0.3
     a_CR_litt = 0.6
     a_CR_pel = 0.6
-    a_PR_litt = 0.2 
-    a_PR_pel = 0.2
-    aT_litt = 1.5
-    aT_pel = 1.5
+    a_PR_litt = 0.3 
+    a_PR_pel = 0.3
+    aT_litt = 1.0
+    aT_pel = 1.0
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -50,7 +42,8 @@ using Distributed
 end
 
 
-## Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
+## Generalist Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
+# unpack is the passing of the mutable parameters
 
 function adapt_model!(du, u, p, t)
     @unpack r_litt, r_pel, k_litt, k_pel, α_pel, α_litt, e_CR, e_PC, e_PR, aT_pel, aT_litt, a_CR_litt, a_CR_pel, a_PR_litt, a_PR_pel, h_CR, h_PC, h_PR, m_C, m_P, T, Topt_litt, Tmax_litt, aT_litt, Topt_pel, Tmax_pel, aT_pel, σ = p 
@@ -81,87 +74,69 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
-
+## using ForwardDiff for eigenvalue analysis, need to reassign model for just u
 function adapt_model(u, AdaptPar, t)
     du = similar(u)
     adapt_model!(du, u, AdaptPar, t)
     return du
 end
 
-let
-    u0 = [0.6802990085400237,
-    0.5275129023434301,
-    0.08959168230963603,
-    0.23365213014702507,
-    0.06954368400104854]
-    t_span = (0.0, 1000.0)
-    p = AdaptPar()
-
-    prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
-
-    adapt_ts = figure()
-    plot(sol.t, sol.u)
-    xlabel("time")
-    ylabel("Density")
-    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
-    return adapt_ts
-
-end
-
-## Calculating Interior Eqs -- numerical solutions
-
-tspan = (0.0, 1000.0)
-
 u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
+par = AdaptPar(T=30)
+eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
+Tis = 20:0.01:35
+eqhold = fill(0.0,length(Tis),6)
 
-par = AdaptPar(T=29)
+## solving for equilibrium 
+for i=1:length(Tis)
+    par = AdaptPar(T=Tis[i])
+   if i==1
+     u0 = [0.5,0.5,0.5,0.5, 0.3]
+   else 
+     u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
+   end 
+    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
 
-prob = ODEProblem(adapt_model!, u0, tspan, par)
-
-sol = OrdinaryDiffEq.solve(prob)
-
-eq() = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-
-#
-
-
-
-
-## Adding stochasticity to model using gaussian white noise (SDEproblem)
-
-function stoch_adapt!(du, u, p2, t)
-    @unpack  noise = p2
-
-    du[1] = noise * u[1]
-    du[2] = noise * u[2]
-    du[3] = noise * u[3]
-    du[4] = noise * u[4]
-    du[5] = noise * u[5]
-    return du 
+    eqhold[i,1] = Tis[i]
+    eqhold[i,2:end] = eq
+    println(eqhold[i,:])
 end
 
 
-## Plotting time series with noise 
+# Function to calculate the jacobian at any point (with any model)
+function jac(u, model, p)
+    ForwardDiff.jacobian(u -> model(u, p, NaN), u)
+end
+
+# Functions to calculate maximum eigenvalue (real part) -- here temp is 25 degrees 
+λ_stability(M) = maximum(real.(eigvals(M)))
+
+adapt_jac = jac(eq, adapt_model, AdaptPar(T=25))
+
+eigvals(adapt_jac)
+
+λ_stability(adapt_jac)
+
+
+# Check mark diagram
+function T_maxeig_data()
+    Tvals = 10:0.01:35
+    max_eig = zeros(length(Tvals))
+
+    for (Ti, Tval) in enumerate(Tvals)
+        p = AdaptPar(T = Tval)
+        max_eig[Ti] = λ_stability(jac(eq, adapt_model, p))
+    end
+    return hcat(collect(Tvals), max_eig)
+end
 
 let
-    param = AdaptPar(T=29, noise = 0.01)
-    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
-    tspan = (0.0, 1000.0)
-
-    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, param)
-    sol_stoch = solve(prob_stoch, reltol = 1e-15, callback = PositiveDomain())
-
-    stoch_ts = figure()
-    plot(sol_stoch.t, sol_stoch.u)
-    xlabel("time")
-    ylabel("Density")
-    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
-    return stoch_ts
-
+    data = T_maxeig_data()
+    maxeigen_plot = figure()
+    plot(data[:,1], data[:,2], color = "black")
+    ylabel("Re(λₘₐₓ)", fontsize = 15)
+    xlim(10, 35)
+    ylim(-0.35, 1.0)
+    xlabel("Temperature", fontsize = 15)
+    return maxeigen_plot
 end
-
-
-
-
-

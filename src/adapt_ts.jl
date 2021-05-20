@@ -75,8 +75,8 @@ end
 
 let
     u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
-    t_span = (0.0, 1000.0)
-    p = AdaptPar(T=30)
+    t_span = (0.0, 5000.0)
+    p = AdaptPar(T=28.69)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
