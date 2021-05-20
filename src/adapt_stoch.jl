@@ -4,6 +4,16 @@ using ForwardDiff
 using PyPlot
 using DifferentialEquations
 using NLsolve
+using Statistics
+using RecursiveArrayTools
+using Noise
+using Distributed
+
+## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
+# 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
+
+
+## Parameters are categorized by macrohabitat -> parameters with "_litt" indicate littoral macrohabitat values and those with "_pel" indicate pelagic macrohabitat values  
 
 
 @with_kw mutable struct AdaptPar 
@@ -26,8 +36,8 @@ using NLsolve
     a_CR_pel = 0.6
     a_PR_litt = 0.2 
     a_PR_pel = 0.2
-    aT_litt = 2.0
-    aT_pel = 2.0
+    aT_litt = 1.5
+    aT_pel = 1.5
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -71,36 +81,40 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
+## Adding stochasticity to model using gaussian white noise (SDEproblem)
 
-## Calculating eqs for AdaptPar 
+function stoch_adapt!(du, u, p2, t)
+    @unpack  noise = p2
 
-tspan = (0.0, 1000.0)
-u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
-
-par = AdaptPar(T=30)
-
-# this the ode version solving in time, not running it now for speed
- prob = ODEProblem(adapt_model!, u0, tspan, par)
- sol = OrdinaryDiffEq.solve(prob)
-
-# this is just solving algebraically where the odes =0 --> looks just for equilibrium
-eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
-
-# Now just going to calculate equilibrium from nonlinear solver
-## For loop function to calculate eqs
-
-
-# for now lets just speak in the most basic julia tongue so we now wtf we are doing
-# loop over i from 20 to 30 stepsize 5
-# call equilibrium solver
-
-for Ti=20.:1.0:30
-    par = AdaptPar(T=Ti)
-    u0 = [0.5, 0.5, 0.5, 0.5, 0.3]
-    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
-    print(Ti,eq)
+    du[1] = noise * u[1]
+    du[2] = noise * u[2]
+    du[3] = noise * u[3]
+    du[4] = noise * u[4]
+    du[5] = noise * u[5]
+    return du 
 end
 
 
-  
+## Plotting time series with noise 
+
+let
+    param = AdaptPar(T=29, noise = 0.01)
+    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
+    tspan = (0.0, 1000.0)
+
+    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, param)
+    sol_stoch = solve(prob_stoch, reltol = 1e-15)
+
+    stoch_ts = figure()
+    plot(sol_stoch.t, sol_stoch.u)
+    xlabel("time")
+    ylabel("Density")
+    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
+    return stoch_ts
+
+end
+
+
+
+
 
