@@ -71,12 +71,10 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
-
-
 let
-    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
+    u0 = [0.8, 0.6, 0.5, 0.4,0.3]
     t_span = (0.0, 5000.0)
-    p = AdaptPar(T=28.69)
+    p = AdaptPar(T=31.5)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
@@ -89,3 +87,7 @@ let
     return adapt_ts
 
 end
+
+
+
+  

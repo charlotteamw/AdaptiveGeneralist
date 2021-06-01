@@ -78,14 +78,15 @@ end
 ## time span for ode solver when we use it
 # u0 is initial value of the initial value problem 
 
+
+
+# this the ode version solving in time
 tspan = (0.0, 1000.0)
 u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
-
 par = AdaptPar(T=30)
-
-# this the ode version solving in time, not running it now for speed
-# prob = ODEProblem(adapt_model!, u0, tspan, par)
-# sol = OrdinaryDiffEq.solve(prob)
+prob = ODEProblem(adapt_model!, u0, tspan, par)
+sol = OrdinaryDiffEq.solve(prob)
+equil= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
 
 # this is just solving algebraically where the odes =0 --> looks just for equilibrium
@@ -101,14 +102,19 @@ eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
 
 # set actiual loop of parameter Tis -- temperature
 # figure out how many steps it will take and we wil luse this in the loop
-Tis = 20.0:0.01:30.0
+Tis = 27.5:0.01:32.0
 eqhold = fill(0.0,length(Tis),6)
 
 # loop over i but really subbing in Tis
 for i=1:length(Tis)
     par = AdaptPar(T=Tis[i])
    if i==1
-     u0 = [0.5,0.5,0.5,0.5, 0.3]
+     u0 = [ 0.5928342081370711,
+     0.6974050738463745,
+     0.10605886832238756,
+     0.003509224701950255,
+     0.027302094900570676
+    ]
    else 
      u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
    end 
@@ -119,11 +125,40 @@ for i=1:length(Tis)
     println(eqhold[i,:])
 end
 
-##3 shows 25th step of Tis and first state variable of model
+
+
+
+plot(eqhold[:,1], eqhold[:,2])
+plot(eqhold[:,1], eqhold[:,3])
+plot(eqhold[:,1], eqhold[:,4])
+plot(eqhold[:,1], eqhold[:,5])
+plot(eqhold[:,1], eqhold[:,6])
+
+
+## shows 25th step of Tis and first state variable of model
     @show eqhold[25,1]
 
-    plot(eqhold[:,1],eqhold[:,6])   
-    
+PCp = eqhold[:,6 ] ./ eqhold[:,5]
 
-# now, for kicks, lets plot temperature versus Equilibrium, say P* first
-# 
+
+plot(eqhold[:,1], PCp)
+
+PCl = eqhold[:,6 ] ./ eqhold[:,4]
+
+plot(eqhold[:,1], PCl)
+
+PRp = eqhold[:,6 ] ./ eqhold[:,3]
+
+plot(eqhold[:,1], PRp)
+
+PRl = eqhold[:,6 ] ./ eqhold[:,2]
+
+plot(eqhold[:,1], PRl)
+
+CRp = eqhold[:,5] ./ eqhold[:,3]
+
+plot(eqhold[:,1], CRp)
+
+CRl = eqhold[:,4] ./ eqhold[:,2]
+
+plot(eqhold[:,1], CRl)
