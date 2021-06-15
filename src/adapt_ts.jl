@@ -4,6 +4,8 @@ using ForwardDiff
 using PyPlot
 using DifferentialEquations
 using NLsolve
+using StatsBase
+using Distributed
 
 
 @with_kw mutable struct AdaptPar 
@@ -74,11 +76,10 @@ end
 let
     u0 = [0.8, 0.6, 0.5, 0.4,0.3]
     t_span = (0.0, 5000.0)
-    p = AdaptPar(T=31.5)
+    p = AdaptPar(T=28)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
-
     adapt_ts = figure()
     plot(sol.t, sol.u)
     xlabel("time")
@@ -90,4 +91,47 @@ end
 
 
 
-  
+## Calculating Cross Correlations 
+
+let
+    u0 = [0.8, 0.6, 0.5, 0.4, 0.3]
+    t_span = (500.0, 1000.0)
+    p = AdaptPar(T=31)
+
+    prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
+    sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
+
+    adapt_corr = crosscor(sol[1, 1:end], sol[2, 1:end], [0])
+    println(sol[2,1:end])
+    return adapt_corr
+
+end
+
+function cors(tend)
+    Trange = 27.5:0.01:31
+    corr_temp = zeros(length(Trange))
+   
+    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    t_span = (0.0, tend)
+    remove_transient = 500.0:1.0:tend
+
+    for (Ti, Tvals) in enumerate(Trange)
+        p = AdaptPar(T = Tvals)
+        prob = ODEProblem(adapt_model!, u0, t_span, p)
+        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
+        solend = sol(remove_transient)
+
+        corr_temp[Ti] = crosscor(sol[1, 1:end], sol[2, 1:end], [0])
+    end
+
+    return hcat(Trange, corr_temp)
+end
+
+let
+    data = cors(1000.0)
+    corrplot = figure()
+    plot(data[:,1], data[:,2])
+    xlabel("Temp")
+    ylabel("R1 R2 Cross Correlation")
+    return corrplot
+end

@@ -8,6 +8,7 @@ using Statistics
 using RecursiveArrayTools
 using Noise
 using Distributed
+using StatsBase
 
 ## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
 # 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
@@ -114,6 +115,38 @@ let
 
 end
 
+function T_corr_data()
+    Tvals = 27.5:0.01:31.5
+    temp_cor = zeros(length(Tvals))
+
+
+    for (Ti, Tval) in enumerate(Tvals)
+        p = AdaptPar(T = Tval)
+        u0 = [0.4, 0.4, 0.3, 0.3, 0.2]
+        tspan = (500.0, 1000.0)
+    
+      
+    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, p)
+    sol_stoch = solve(prob_stoch, reltol = 1e-15)
+    
+        temp_cor[Ti] = crosscor(sol_stoch.u[1], sol_stoch.u[5])
+    end
+    return hcat(collect(Tvals), temp_cor)
+end
+
+data=T_corr_data()
+println(data[:,1], data[:,2])
+
+let
+    data = T_corr_data()
+    corr_plot = figure()
+    plot(data[:,1], data[:,2], color = "black")
+    ylabel("Littoral C and P Correlation", fontsize = 15)
+    xlim(27.5, 30.9)
+    ylim(0.0, 1.0)
+    xlabel("Temperature", fontsize = 15)
+    return corr_plot
+end
 
 
 

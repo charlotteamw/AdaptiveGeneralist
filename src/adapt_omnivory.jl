@@ -29,8 +29,6 @@ pygui(true)
     a_CR_pel = 0.6
     a_PR_litt = 0.2 
     a_PR_pel = 0.2
-    a_PC_litt =1.0
-    a_PC_litt = 1.0
     aT_litt = 2.0
     aT_pel = 2.0
     Tmax_litt = 35
@@ -40,6 +38,7 @@ pygui(true)
     σ = 6
     T = 29
     noise = 0.1
+    
 
     
 end
@@ -77,7 +76,64 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
+## Calculate Equilibrium
+u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
+p = AdaptPar(T=30)
+eq= nlsolve((du, u) -> adapt_model!(du, u, p, 0.0), u0).zero
+Tis = 29:0.01:32.0
+eqhold = fill(0.0,length(Tis),6)
+for i=1:length(Tis)
+    par = AdaptPar(T=Tis[i])
+   if i==1
+     u0 = [ 0.5928342081370711,
+     0.6974050738463745,
+     0.10605886832238756,
+     0.003509224701950255,
+     0.027302094900570676
+    ]
+   else 
+     u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
+   end 
+    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
+    eqhold[i,1] = Tis[i]
+    eqhold[i,2:end] = eq
+    println(eqhold[i,:])
+end
 
+
+function T_omniv_data()
+        Tvals = 27.5:0.01:31.5
+        omnivory = zeros(length(Tvals))
+
+        a_PC_litt = ifelse(T < Topt_litt,  
+        aT_litt * exp(-((T - Topt_litt)/(2*σ))^2), 
+        aT_litt * (1 - ((T - (Topt_litt))/((Topt_litt) - Tmax_litt))^2)
+        )
+        
+        a_PC_pel = ifelse(T < Topt_pel, 
+        aT_pel * exp(-((T - Topt_pel)/(2*σ))^2),
+        aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2) 
+        )
+        
+        for (Ti, Tval) in enumerate(Tvals)
+            p = AdaptPar(T = Tval)
+            omnivory[Ti] = ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) )/ ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) + (a_PC_litt * e_PC * eqhold[1,6] * eqhold[1,4])/(1 + h_PC * a_PC_litt * eqhold[1,4]) + (a_PC_pel * e_PC * eqhold[1,6] * eqhold[1,5])/(1 + h_PC * a_PC_pel * eqhold[1,5]))
+        end
+        return hcat(collect(Tvals), omnivory)
+ end
+
+    
+
+ let
+        data = T_omniv_data()
+        omnivory_plot = figure()
+        plot(data[:,1], data[:,2], color = "black")
+        ylabel("Omnivory", fontsize = 15)
+        xlim(27.5, 31.5)
+        ylim(0.0, 1.0)
+        xlabel("Temperature", fontsize = 15)
+        return omnivory_plot
+end
 ## time span for ode solver when we use it
 # u0 is initial value of the initial value problem 
 
@@ -96,102 +152,3 @@ equil= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 # u0 is this initial valu you use to seed the nlsolve, if you use sol you use the last
 # solution out of the ode solver, lets not do that now
 eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
-
-# for now lets just speak in the most basic julia tongue so we now wtf we are doing
-# loop over i from 20 to 30 stepsize 5
-# call equilibrium solver
-# adatpar are the parameters and are mutbale remember
-# println separates lines of print so they are not mashed together
-
-# set actiual loop of parameter Tis -- temperature
-# figure out how many steps it will take and we wil luse this in the loop
-Tis = 27.5:0.01:32.0
-eqhold = fill(0.0,length(Tis),6)
-
-# loop over i but really subbing in Tis
-for i=1:length(Tis)
-    par = AdaptPar(T=Tis[i])
-   if i==1
-     u0 = [ 0.5928342081370711,
-     0.6974050738463745,
-     0.10605886832238756,
-     0.003509224701950255,
-     0.027302094900570676
-    ]
-   else 
-     u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
-   end 
-    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
-# ... filling appropriate eqhold cells, first with Tis (temp), and cells 2-6 second with equilibrium
-    eqhold[i,1] = Tis[i]
-    eqhold[i,2:end] = eq
-    println(eqhold[i,:])
-end
-
-
-eqhold[1,6]
-
-omnivory(AdaptPar) = ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) )/ ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) + (a_PC_litt * e_PC * eqhold[1,6] * eqhold[1,4])/(1 + h_PC * a_PC_litt * eqhold[1,4]) + (a_PC_pel * e_PC * eqhold[1,6] * eqhold[1,5])/(1 + h_PC * a_PC_pel * eqhold[1,5]))
-
-omnivory(AdaptPar(T=28))
-
-return hcat(collect(Tis), omnivory)
-end
-
-
-let
-    data = omniv
-    omniv_plot = figure()
-    plot(data[:,1], data[:,2], color = "black")
-    ylabel("Omnivory", fontsize = 15)
-    xlim(27.5, 31.5)
-    ylim(0.0, 1.0)
-    xlabel("Temperature", fontsize = 15)
-    return omniv_plot
-end
-
-
-
-
-
-plot(eqhold[:,1], eqhold[:,2])
-plot(eqhold[:,1], eqhold[:,3])
-plot(eqhold[:,1], eqhold[:,4])
-plot(eqhold[:,1], eqhold[:,5])
-plot(eqhold[:,1], eqhold[:,6])
-
-
-## shows 25th step of Tis and first state variable of model
-    @show eqhold[25,1]
-
-PCp = eqhold[:,6 ] ./ eqhold[:,5]
-
-
-plot(eqhold[:,1], PCp)
-
-PCl = eqhold[:,6 ] ./ eqhold[:,4]
-
-plot(eqhold[:,1], PCl)
-
-PRp = eqhold[:,6 ] ./ eqhold[:,3]
-
-plot(eqhold[:,1], PRp)
-
-PRl = eqhold[:,6 ] ./ eqhold[:,2]
-
-plot(eqhold[:,1], PRl)
-
-CRp = eqhold[:,5] ./ eqhold[:,3]
-
-plot(eqhold[:,1], CRp)
-
-CRl = eqhold[:,4] ./ eqhold[:,2]
-
-plot(eqhold[:,1], CRl)
-
-
-### calculating proportion of R consumed by p
-
-
-
-( (a_PR_litt * e_PR * eqhold[:,6] * eqhold[:,2])/(1 + h_PR * a_PR_litt * eqhold[:,2]) + (a_PR_pel * e_PR * eqhold[:,6] * eqhold[:,3])/(1 + h_PR * a_PR_pel * eqhold[:,3]) )/ ((a_PR_litt * e_PR * eqhold[:,6] * eqhold[:,2])/(1 + h_PR * a_PR_litt * eqhold[:,2]) + (a_PR_pel * e_PR * eqhold[:,6] * eqhold[:,3])/(1 + h_PR * a_PR_pel * eqhold[:,3]) +      (a_PC_litt * e_PC * eqhold[:,6] * eqhold[:,4])/(1 + h_PC * a_PC_litt * eqhold[:,4]) + (a_PC_pel * e_PC * eqhold[:,6] * eqhold[:,5])/(1 + h_PC * a_PC_pel * eqhold[:,5]))
