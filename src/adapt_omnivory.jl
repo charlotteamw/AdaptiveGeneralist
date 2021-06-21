@@ -76,29 +76,7 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
-## Calculate Equilibrium
-u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
-p = AdaptPar(T=30)
-eq= nlsolve((du, u) -> adapt_model!(du, u, p, 0.0), u0).zero
-Tis = 29:0.01:32.0
-eqhold = fill(0.0,length(Tis),6)
-for i=1:length(Tis)
-    par = AdaptPar(T=Tis[i])
-   if i==1
-     u0 = [ 0.5928342081370711,
-     0.6974050738463745,
-     0.10605886832238756,
-     0.003509224701950255,
-     0.027302094900570676
-    ]
-   else 
-     u0 = [eq[1], eq[2], eq[3], eq[4], eq[5]]
-   end 
-    eq = nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
-    eqhold[i,1] = Tis[i]
-    eqhold[i,2:end] = eq
-    println(eqhold[i,:])
-end
+
 
 
 function T_omniv_data()
@@ -117,38 +95,58 @@ function T_omniv_data()
         
         for (Ti, Tval) in enumerate(Tvals)
             p = AdaptPar(T = Tval)
-            omnivory[Ti] = ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) )/ ((a_PR_litt * e_PR * eqhold[1,6] * eqhold[1,2])/(1 + h_PR * a_PR_litt * eqhold[1,2]) + (a_PR_pel * e_PR * eqhold[1,6] * eqhold[1,3])/(1 + h_PR * a_PR_pel * eqhold[1,3]) + (a_PC_litt * e_PC * eqhold[1,6] * eqhold[1,4])/(1 + h_PC * a_PC_litt * eqhold[1,4]) + (a_PC_pel * e_PC * eqhold[1,6] * eqhold[1,5])/(1 + h_PC * a_PC_pel * eqhold[1,5]))
+            u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+            eq= nlsolve((du, u) -> adapt_model!(du, u, p, 0.0), u0).zero
+            omnivory[Ti] = ((a_PR_litt * e_PR * eq[5] * eq[1])/(1 + h_PR * a_PR_litt * eq[1]) + (a_PR_pel * e_PR * eq[5] * eq[2])/(1 + h_PR * a_PR_pel * eq[2]) )/ ((a_PR_litt * e_PR * eq[5] * eq[1])/(1 + h_PR * a_PR_litt * eq[1]) + (a_PR_pel * e_PR * eq[5] * eq[2])/(1 + h_PR * a_PR_pel * eq[2]) + (a_PC_litt * e_PC * eq[5] * eq[3])/(1 + h_PC * a_PC_litt * eq[3]) + (a_PC_pel * e_PC * eq[5] * eq[4])/(1 + h_PC * a_PC_pel * eq[4]))
         end
         return hcat(collect(Tvals), omnivory)
  end
 
-    
+ 
+ data = T_omniv_data()
+
 
  let
         data = T_omniv_data()
         omnivory_plot = figure()
         plot(data[:,1], data[:,2], color = "black")
         ylabel("Omnivory", fontsize = 15)
-        xlim(27.5, 31.5)
+        xlim(27.5, 30.5)
         ylim(0.0, 1.0)
         xlabel("Temperature", fontsize = 15)
         return omnivory_plot
 end
-## time span for ode solver when we use it
-# u0 is initial value of the initial value problem 
 
 
 
-# this the ode version solving in time
-tspan = (0.0, 1000.0)
-u0 = [ 0.5, 0.5, 0.3, 0.3, 0.3]
-par = AdaptPar(T=30)
-prob = ODEProblem(adapt_model!, u0, tspan, par)
-sol = OrdinaryDiffEq.solve(prob)
-equil= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), sol.u[end]).zero
 
 
-# this is just solving algebraically where the odes =0 --> looks just for equilibrium
-# u0 is this initial valu you use to seed the nlsolve, if you use sol you use the last
-# solution out of the ode solver, lets not do that now
-eq= nlsolve((du, u) -> adapt_model!(du, u, par, 0.0), u0).zero
+ let
+    
+    a_PC_litt = ifelse(T < Topt_litt,  
+    aT_litt * exp(-((T - Topt_litt)/(2*σ))^2), 
+    aT_litt * (1 - ((T - (Topt_litt))/((Topt_litt) - Tmax_litt))^2)
+    )
+    
+    a_PC_pel = ifelse(T < Topt_pel, 
+    aT_pel * exp(-((T - Topt_pel)/(2*σ))^2),
+    aT_pel * (1 - ((T - (Topt_pel))/((Topt_pel) - Tmax_pel))^2) 
+    )
+    
+    p = AdaptPar(T=27.5)
+    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    eq= nlsolve((du, u) -> adapt_model!(du, u, p, 0.0), u0).zero
+    FR_Rlitt =  (a_PR_litt * e_PR * eq[5] * eq[1])/(1 + (h_PR * a_PR_litt * eq[1]))
+    FR_Rpel = (a_PR_pel * e_PR * eq[5] * eq[2])/(1 + (h_PR * a_PR_pel * eq[2]))
+    FR_Clitt = (a_PC_litt * e_PC * eq[5] * eq[3])/(1 + (h_PC * a_PC_litt * eq[3]))
+    FR_Cpel = (a_PC_pel * e_PC * eq[5] * eq[4])/(1 + (h_PC * a_PC_pel * eq[4]))
+    omnivory = (FR_Rlitt + FR_Rpel) / (FR_Rlitt + FR_Rpel + FR_Clitt + FR_Cpel)
+
+
+   
+    println(a_PC_pel)
+    println(a_PC_litt)
+  return omnivory
+end
+
+

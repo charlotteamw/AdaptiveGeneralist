@@ -10,8 +10,8 @@ using Distributed
 
 @with_kw mutable struct AdaptPar 
     
-    r_litt = 1.0
-    r_pel = 1.0
+    r_litt = 3.0
+    r_pel = 3.0
     α_pel = 0.5   ##competitive influence of pelagic resource on littoral resource 
     α_litt = 0.5   ## competitve influence of littoral resource on pelagic resource
     k_litt = 1.0 
@@ -28,8 +28,8 @@ using Distributed
     a_CR_pel = 0.6
     a_PR_litt = 0.2 
     a_PR_pel = 0.2
-    aT_litt = 2.0
-    aT_pel = 2.0
+    aT_litt = 4.0
+    aT_pel = 4.0
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -73,65 +73,40 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
+## plotting ts 
+
 let
-    u0 = [0.8, 0.6, 0.5, 0.4,0.3]
-    t_span = (0.0, 5000.0)
+    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    t_span = (1000.0, 2000.0)
     p = AdaptPar(T=28)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
     adapt_ts = figure()
-    plot(sol.t, sol.u)
+    plot(sol.t, sol[5, 1:end])
     xlabel("time")
     ylabel("Density")
-    legend(["R_litt", "R_pel", "C_litt", "C_pel", "P"])
+    legend(["P"])
     return adapt_ts
 
 end
 
 
 
-## Calculating Cross Correlations 
-
+## Calculating autocorrelations
 let
-    u0 = [0.8, 0.6, 0.5, 0.4, 0.3]
-    t_span = (500.0, 1000.0)
-    p = AdaptPar(T=31)
+    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    t_span = (1000.0, 5000.0)
+    p = AdaptPar(T=28)
 
     prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
     sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
 
-    adapt_corr = crosscor(sol[1, 1:end], sol[2, 1:end], [0])
-    println(sol[2,1:end])
-    return adapt_corr
+    adaptauto_corr = autocor(sol[5, 1:end], 0:100)
+    plot_autocorr = figure()
+    plot(autocor(sol[5, 6000:end], 0:200))
+    xlabel("Lag")
+    ylabel("ACF")
+    return plot_autocorr
 
-end
-
-function cors(tend)
-    Trange = 27.5:0.01:31
-    corr_temp = zeros(length(Trange))
-   
-    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    t_span = (0.0, tend)
-    remove_transient = 500.0:1.0:tend
-
-    for (Ti, Tvals) in enumerate(Trange)
-        p = AdaptPar(T = Tvals)
-        prob = ODEProblem(adapt_model!, u0, t_span, p)
-        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
-        solend = sol(remove_transient)
-
-        corr_temp[Ti] = crosscor(sol[1, 1:end], sol[2, 1:end], [0])
-    end
-
-    return hcat(Trange, corr_temp)
-end
-
-let
-    data = cors(1000.0)
-    corrplot = figure()
-    plot(data[:,1], data[:,2])
-    xlabel("Temp")
-    ylabel("R1 R2 Cross Correlation")
-    return corrplot
 end

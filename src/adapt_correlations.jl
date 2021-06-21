@@ -4,42 +4,32 @@ using ForwardDiff
 using PyPlot
 using DifferentialEquations
 using NLsolve
-using Statistics
-using RecursiveArrayTools
-using Noise
-using Distributed
 using StatsBase
-
-## Here we will illustrate the case of a generalist predator that ultimately has a climate-driven differential response to its prey. In this case, we change from 
-# 20C-30C and show a generalist predator switching between prey in alternate habitats. Here, the generalist predator is omnivorous, and has different temperature responses in different habitats (littoral & pelagic)
-
-
-## Parameters are categorized by macrohabitat -> parameters with "_litt" indicate littoral macrohabitat values and those with "_pel" indicate pelagic macrohabitat values  
-
+using Distributed
 
 
 @with_kw mutable struct AdaptPar 
     
-    r_litt = 10.0
-    r_pel = 10.0
+    r_litt = 1.0
+    r_pel = 1.0
     α_pel = 0.5   ##competitive influence of pelagic resource on littoral resource 
     α_litt = 0.5   ## competitve influence of littoral resource on pelagic resource
-    k_litt = 2.0 
-    k_pel = 2.0
+    k_litt = 1.0 
+    k_pel = 1.0
     h_CR = 0.5
     h_PC = 0.5
     h_PR = 0.5
     e_CR = 0.8
     e_PC = 0.8
     e_PR = 0.8
-    m_C = 0.1
-    m_P = 0.1
-    a_CR_litt = 2.0
-    a_CR_pel = 2.0
-    a_PR_litt = 1.0
-    a_PR_pel = 1.0
-    aT_litt = 3.0
-    aT_pel = 3.0
+    m_C = 0.2
+    m_P = 0.3
+    a_CR_litt = 0.6
+    a_CR_pel = 0.6
+    a_PR_litt = 0.2 
+    a_PR_pel = 0.2
+    aT_litt = 2.0
+    aT_pel = 2.0
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -48,6 +38,7 @@ using StatsBase
     T = 29
     noise = 0.1
 
+    
 end
 
 
@@ -82,73 +73,47 @@ function adapt_model!(du, u, p, t)
     return 
 end
 
-## Adding stochasticity to model using gaussian white noise (SDEproblem)
 
-function stoch_adapt!(du, u, p2, t)
-    @unpack  noise = p2
-
-    du[1] = noise * u[1]
-    du[2] = noise * u[2]
-    du[3] = noise * u[3]
-    du[4] = noise * u[4]
-    du[5] = noise * u[5]
-    return du 
-end
-
-
-## Plotting time series with noise 
-
+## Calculating Cross Correlations 
 
 let
-    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
+    u0 = [0.8, 0.6, 0.5, 0.4, 0.3]
     t_span = (0, 1000.0)
-    p = AdaptPar(T=28, noise =0.0)
-    ts = range(500, 1000, length = 200)
+    p = AdaptPar(T=27.5)
 
-    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, t_span, p)
-    sol_stoch = solve(prob_stoch, reltol = 1e-15)
-    grid_stoch = sol_stoch(ts)
+    prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
+    sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
 
-    adapt_stochts = figure()
-    plot(grid_stoch.t[1:end], grid_stoch[5,1:end])
-    xlabel("time")
-    ylabel("Density")
-    legend(["P"])
-    return adapt_stochts
+    adapt_corr = crosscor(sol[1, 1:end], sol[2, 1:end], [0])
+    return adapt_corr
 
 end
 
-## Calculating autocorrelations
-let
+
+function correlations(tend)
+    Tvals = 27.5:0.01:31.0
+    corr_temp = zeros(length(Tvals))
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    tspan = (0.0, 1000.0)
-    p = AdaptPar(T=28, noise=0.1)
-    ts = range(100, 1000, length = 200)
-    prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, p)
-    sol_stoch = solve(prob_stoch, reltol = 1e-15)
-    grid_stoch = sol_stoch(ts)
-    plot_stochautocorr = figure()
-    plot(autocor(grid_stoch[5, 1:end], 0:50))
-    xlabel("Lag")
-    ylabel("ACF")
-    return plot_stochautocorr
+    t_span = (0.0, 1000.0)
+    time = 500.0:1.0:tend
 
+    for (Ti, Tvals) in enumerate(Tvals)
+        p = AdaptPar(T = Tvals)
+        prob = ODEProblem(adapt_model!, u0, t_span, p)
+        sol = DifferentialEquations.solve(prob, reltol = 1e-8)
+        asol= sol(time)
+
+        corr_temp[Ti] = crosscor(asol[1, 1:end], asol[2, 1:end], [0])
+    end
+    return hcat(Tvals, corr_temp)
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+let
+    data = correlations(1000.0)
+    corrplot = figure()
+    plot(data[:,1], data[:,2])
+    xlabel("Temp")
+    ylabel("R1 R2 Cross Correlation")
+    return corrplot
+end
 
