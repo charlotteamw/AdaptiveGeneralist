@@ -20,26 +20,26 @@ using StatsBase
 
 @with_kw mutable struct AdaptPar 
     
-    r_litt = 10.0
-    r_pel = 10.0
+    r_litt = 5.0
+    r_pel = 5.0
     α_pel = 0.5   ##competitive influence of pelagic resource on littoral resource 
     α_litt = 0.5   ## competitve influence of littoral resource on pelagic resource
-    k_litt = 2.0 
-    k_pel = 2.0
+    k_litt = 1.0 
+    k_pel = 1.0
     h_CR = 0.5
     h_PC = 0.5
     h_PR = 0.5
     e_CR = 0.8
     e_PC = 0.8
     e_PR = 0.8
-    m_C = 0.1
-    m_P = 0.1
-    a_CR_litt = 2.0
-    a_CR_pel = 2.0
-    a_PR_litt = 1.0
-    a_PR_pel = 1.0
-    aT_litt = 3.0
-    aT_pel = 3.0
+    m_C = 0.2
+    m_P = 0.3
+    a_CR_litt = 1.0
+    a_CR_pel = 1.0
+    a_PR_litt = 0.3 
+    a_PR_pel = 0.3
+    aT_litt = 1.5
+    aT_pel = 1.5
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -49,8 +49,6 @@ using StatsBase
     noise = 0.1
 
 end
-
-
 ## Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
 
 function adapt_model!(du, u, p, t)
@@ -101,9 +99,9 @@ end
 
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    t_span = (0, 1000.0)
-    p = AdaptPar(T=28, noise =0.0)
-    ts = range(500, 1000, length = 200)
+    t_span = (0, 10000.0)
+    p = AdaptPar(T=27.5, noise =0.05)
+    ts = range(5000, 6000, length = 1000)
 
     prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, t_span, p)
     sol_stoch = solve(prob_stoch, reltol = 1e-15)
@@ -121,17 +119,18 @@ end
 ## Calculating autocorrelations
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    tspan = (0.0, 1000.0)
-    p = AdaptPar(T=28, noise=0.1)
-    ts = range(100, 1000, length = 200)
+    tspan = (0.0, 10000.0)
+    p = AdaptPar(T=27.5, noise=0.05)
+    ts = range(5000, 6000, length = 1000)
     prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, p)
     sol_stoch = solve(prob_stoch, reltol = 1e-15)
     grid_stoch = sol_stoch(ts)
     plot_stochautocorr = figure()
-    plot(autocor(grid_stoch[5, 1:end], 0:50))
+    plot(autocor(grid_stoch[5, 1:end], 0:200))
     xlabel("Lag")
     ylabel("ACF")
-    return plot_stochautocorr
+    return plot_stochautocorr   
+    savefig(plot_stochautocorr,"autocor27.5.png")
 
 end
 
