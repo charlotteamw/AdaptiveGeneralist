@@ -39,10 +39,7 @@ pygui(true)
     T = 29
     noise = 0.1
     
-
-    
 end
-
 
 ## Generalist Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
 # unpack is the passing of the mutable parameters

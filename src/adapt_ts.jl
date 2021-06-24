@@ -10,8 +10,8 @@ using Distributed
 
 @with_kw mutable struct AdaptPar 
     
-    r_litt = 3.0
-    r_pel = 3.0
+    r_litt = 1.0
+    r_pel = 1.0
     α_pel = 0.5   ##competitive influence of pelagic resource on littoral resource 
     α_litt = 0.5   ## competitve influence of littoral resource on pelagic resource
     k_litt = 1.0 
@@ -28,8 +28,8 @@ using Distributed
     a_CR_pel = 0.6
     a_PR_litt = 0.2 
     a_PR_pel = 0.2
-    aT_litt = 4.0
-    aT_pel = 4.0
+    aT_litt = 2.0
+    aT_pel = 2.0
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -37,7 +37,6 @@ using Distributed
     σ = 6
     T = 29
     noise = 0.1
-
     
 end
 
@@ -77,15 +76,14 @@ end
 
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    t_span = (1000.0, 2000.0)
-    p = AdaptPar(T=28)
+    t_span = (0, 6000.0)
+    p = AdaptPar(T=28.5)
 
-    prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = OrdinaryDiffEq.solve(prob_adapt,  reltol = 1e-8, abstol = 1e-8)
+    prob = ODEProblem(adapt_model!, u0, t_span, p)
     adapt_ts = figure()
-    plot(sol.t, sol[5, 1:end])
-    xlabel("time")
-    ylabel("Density")
+    plot(sol.t[1:end], sol[5,1:end])
+    xlabel("Time", fontsize=14,fontweight=:bold)
+    ylabel("Density", fontsize=14,fontweight=:bold)
     legend(["P"])
     return adapt_ts
 
@@ -96,17 +94,18 @@ end
 ## Calculating autocorrelations
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    t_span = (1000.0, 5000.0)
-    p = AdaptPar(T=28)
-
-    prob_adapt = ODEProblem(adapt_model!, u0, t_span, p)
-    sol = OrdinaryDiffEq.solve(prob_adapt, reltol = 1e-8, abstol = 1e-8)
-
-    adaptauto_corr = autocor(sol[5, 1:end], 0:100)
+    tspan = (0.0, 10000.0)
+    p = AdaptPar(T=28.5)
+    ts = range(5000, 6000, length = 500)
+    prob= ODEProblem(adapt_model!, u0, tspan, p)
+    sol = solve(prob, reltol = 1e-15)
+    grid = sol(ts)
     plot_autocorr = figure()
-    plot(autocor(sol[5, 6000:end], 0:200))
-    xlabel("Lag")
-    ylabel("ACF")
-    return plot_autocorr
+    plot(autocor(grid[5, 1:end], 0:200))
+    xlabel("Lag",fontsize=14,fontweight=:bold)
+    ylabel("ACF",fontsize=14,fontweight=:bold)
+    xlim(0,200)
+    ylim(-0.5,1.0)
+    return plot_autocorr   
 
 end

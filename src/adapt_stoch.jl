@@ -20,8 +20,8 @@ using StatsBase
 
 @with_kw mutable struct AdaptPar 
     
-    r_litt = 5.0
-    r_pel = 5.0
+    r_litt = 1.0
+    r_pel = 1.0
     α_pel = 0.5   ##competitive influence of pelagic resource on littoral resource 
     α_litt = 0.5   ## competitve influence of littoral resource on pelagic resource
     k_litt = 1.0 
@@ -34,12 +34,12 @@ using StatsBase
     e_PR = 0.8
     m_C = 0.2
     m_P = 0.3
-    a_CR_litt = 1.0
-    a_CR_pel = 1.0
-    a_PR_litt = 0.3 
-    a_PR_pel = 0.3
-    aT_litt = 1.5
-    aT_pel = 1.5
+    a_CR_litt = 0.6
+    a_CR_pel = 0.6
+    a_PR_litt = 0.2 
+    a_PR_pel = 0.2
+    aT_litt = 2.0
+    aT_pel = 2.0
     Tmax_litt = 35
     Topt_litt = 25
     Tmax_pel = 30
@@ -47,7 +47,6 @@ using StatsBase
     σ = 6
     T = 29
     noise = 0.1
-
 end
 ## Omnivory Module with Temp Dependent Attack Rates (a_PC_litt => aPC in littoral zone; a_PC_pel => aPC in pelagic zone)
 
@@ -100,7 +99,7 @@ end
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
     t_span = (0, 10000.0)
-    p = AdaptPar(T=27.5, noise =0.05)
+    p = AdaptPar(T=31, noise =0.05)
     ts = range(5000, 6000, length = 1000)
 
     prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, t_span, p)
@@ -109,7 +108,9 @@ let
 
     adapt_stochts = figure()
     plot(grid_stoch.t[1:end], grid_stoch[5,1:end])
-    xlabel("time")
+    xlabel("Lag",fontsize=14,fontweight=:bold)
+    ylabel("ACF",fontsize=14,fontweight=:bold)
+    xlabel("Time")
     ylabel("Density")
     legend(["P"])
     return adapt_stochts
@@ -120,17 +121,19 @@ end
 let
     u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
     tspan = (0.0, 10000.0)
-    p = AdaptPar(T=27.5, noise=0.05)
-    ts = range(5000, 6000, length = 1000)
+    p = AdaptPar(T=31.0, noise=0.05)
+    ts = range(5000, 6000, length = 500)
     prob_stoch = SDEProblem(adapt_model!, stoch_adapt!, u0, tspan, p)
     sol_stoch = solve(prob_stoch, reltol = 1e-15)
     grid_stoch = sol_stoch(ts)
     plot_stochautocorr = figure()
     plot(autocor(grid_stoch[5, 1:end], 0:200))
-    xlabel("Lag")
-    ylabel("ACF")
+    xlabel("Lag",fontsize=14,fontweight=:bold)
+    ylabel("ACF",fontsize=14,fontweight=:bold)
+    xlim(0,200)
+    ylim(-1.0, 1.0)
     return plot_stochautocorr   
-    savefig(plot_stochautocorr,"autocor27.5.png")
+
 
 end
 

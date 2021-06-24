@@ -38,8 +38,6 @@ pygui(true)
     σ = 6
     T = 29
     noise = 0.1
-
-
     
 end
 
