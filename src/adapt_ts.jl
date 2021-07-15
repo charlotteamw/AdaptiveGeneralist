@@ -8,7 +8,7 @@ using StatsBase
 using Distributed
 
 
-@with_kw mutable struct AdaptPar 
+@with_kw mutable struct AdaptPars 
     
     r_litt = 1.0
     r_pel = 1.0
@@ -75,37 +75,20 @@ end
 ## plotting ts 
 
 let
-    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    t_span = (0, 6000.0)
-    p = AdaptPar(T=28.5)
-
+    u0 = [0.5, 0.5, 0.5, 0.5, 0.5]
+    t_span = (0, 2000.0)
+    ts = range(0, 1000, length = 1000)
+    p = AdaptPars(T=29.0)
     prob = ODEProblem(adapt_model!, u0, t_span, p)
+    sol = solve(prob, reltol = 1e-15)
+    grid = sol(ts)
     adapt_ts = figure()
-    plot(sol.t[1:end], sol[5,1:end])
+    plot(grid.t, grid.u)
     xlabel("Time", fontsize=14,fontweight=:bold)
     ylabel("Density", fontsize=14,fontweight=:bold)
-    legend(["P"])
+    legend(["R1", "R2", "C1", "C2","P"])
     return adapt_ts
 
 end
 
 
-
-## Calculating autocorrelations
-let
-    u0 = [0.5, 0.5, 0.3, 0.3, 0.3]
-    tspan = (0.0, 10000.0)
-    p = AdaptPar(T=28.5)
-    ts = range(5000, 6000, length = 500)
-    prob= ODEProblem(adapt_model!, u0, tspan, p)
-    sol = solve(prob, reltol = 1e-15)
-    grid = sol(ts)
-    plot_autocorr = figure()
-    plot(autocor(grid[5, 1:end], 0:200))
-    xlabel("Lag",fontsize=14,fontweight=:bold)
-    ylabel("ACF",fontsize=14,fontweight=:bold)
-    xlim(0,200)
-    ylim(-0.5,1.0)
-    return plot_autocorr   
-
-end

@@ -111,8 +111,7 @@ end
 let
     data = T_maxeig_data()
     maxeigen_plot = figure()
-    y=0
-    plot(data[:,1], data[:,2], y, color = "black")
+    plot(data[:,1], data[:,2], color = "black")
     hlines= ([0])
     ylabel("Re(λₘₐₓ)", fontsize = 14, fontweight=:bold)
     xlabel("Temperature", fontsize = 14, fontweight=:bold)

@@ -79,6 +79,34 @@ end
 function T_omniv_data()
         Tvals = 27.5:0.01:31.5
         omnivory = zeros(length(Tvals))
+        r_litt = 1.0
+        r_pel = 1.0
+        α_pel = 0.5   
+        α_litt = 0.5   
+        k_litt = 1.0 
+        k_pel = 1.0
+        h_CR = 0.5
+        h_PC = 0.5
+        h_PR = 0.5
+        e_CR = 0.8
+        e_PC = 0.8
+        e_PR = 0.8
+        m_C = 0.2
+        m_P = 0.3
+        a_CR_litt = 0.6
+        a_CR_pel = 0.6
+        a_PR_litt = 0.2 
+        a_PR_pel = 0.2
+        aT_litt = 2.0
+        aT_pel = 2.0
+        Tmax_litt = 35
+        Topt_litt = 25
+        Tmax_pel = 30
+        Topt_pel = 24
+        σ = 6
+        T = 29
+        noise = 0.1
+        
 
         a_PC_litt = ifelse(T < Topt_litt,  
         aT_litt * exp(-((T - Topt_litt)/(2*σ))^2), 
